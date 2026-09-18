@@ -1,0 +1,51 @@
+name: Build KytyPS5
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Ветка для сборки'
+        required: true
+        default: 'perf/reduce-gpu-cpu-stalls'
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          submodules: recursive
+
+      - name: Setup Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: 1.3.268.0
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+
+      - name: Configure CMake
+        run: >
+          cmake -S . -B _Build/windows
+          -DCMAKE_BUILD_TYPE=Release
+          -DKYTY_ENABLE_PROFILER=OFF
+
+      - name: Build
+        run: >
+          cmake --build _Build/windows
+          --target launcher
+          --config Release
+          --parallel
+
+      - name: Install
+        run: >
+          cmake --install _Build/windows
+          --prefix _Build/windows/install
+          --config Release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KytyPS5-Windows-Release
+          path: _Build/windows/install/
